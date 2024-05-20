@@ -1,0 +1,104 @@
+1. Average points in a game vs average points scored in a windy outdoor game.
+
+    WITH AllGames AS (
+        SELECT 
+            AVG(homeTeamFinalScore + visitTeamFinalScore) AS avgPointsAllGames
+        FROM historicalWeatherTable
+    ),
+    HighWindOpenRoofGames AS (
+        SELECT 
+            AVG(homeTeamFinalScore + visitTeamFinalScore) AS avgPointsHighWindOpenRoofGames
+        FROM historicalWeatherTable
+        WHERE gameTimeWindSpeed > 10
+        AND roofType = 'Open'
+        AND gameVarianceWindSpeed > -2
+    )
+    SELECT 
+        AllGames.avgPointsAllGames,
+        HighWindOpenRoofGames.avgPointsHighWindOpenRoofGames
+    FROM AllGames, HighWindOpenRoofGames;
+
+
+2. Average points in a game vs average points scored in a low temp outdoor game.
+
+    WITH AllGames AS (
+        SELECT 
+            AVG(homeTeamFinalScore + visitTeamFinalScore) AS avgPointsAllGames
+        FROM historicalWeatherTable
+    ),
+    LowTempOpenRoofGames AS (
+        SELECT 
+            AVG(homeTeamFinalScore + visitTeamFinalScore) AS avgPointsLowTempOpenRoofGames
+        FROM historicalWeatherTable
+        WHERE gameTimeTemperature < 40
+        AND roofType = 'Open'
+        AND gameVarianceTemperature < 5
+    )
+    -- Combine the results
+    SELECT 
+        AllGames.avgPointsAllGames,
+        HighWindOpenRoofGames.avgPointsHighWindOpenRoofGames
+    FROM AllGames, HighWindOpenRoofGames;
+
+3. Titans average score in open roof vs  fixed or retractable.
+
+    WITH TitansOpenRoofGames AS (
+        SELECT 
+            AVG(CASE WHEN homeTeam = 'Tennessee Titans' THEN homeTeamFinalScore ELSE visitTeamFinalScore END) AS avgPointsTitansOpenRoof
+        FROM historicalWeatherTable
+        WHERE roofType = 'Open'
+        AND (homeTeam = 'Tennessee Titans' OR visitTeam = 'Tennessee Titans')
+    ),
+    NonOpenRoofGames AS (
+        SELECT 
+            AVG(homeTeamFinalScore + visitTeamFinalScore) AS avgPointsNonOpenRoofGames
+        FROM historicalWeatherTable
+        WHERE roofType <> 'Open'
+    )
+    SELECT 
+        TitansOpenRoofGames.avgPointsTitansOpenRoof,
+        NonOpenRoofGames.avgPointsNonOpenRoofGames
+    FROM TitansOpenRoofGames, NonOpenRoofGames;
+
+4. A query for a wet field at Nissan field and average points scored vs average score at nissan field
+
+    WITH NissanFieldGames AS (
+        SELECT 
+            gameDate,
+            homeTeam,
+            visitTeam,
+            homeTeamFinalScore + visitTeamFinalScore AS totalPoints,
+            gameTimeTotalPrecipitation
+        FROM historicalWeatherTable
+        WHERE name = 'Nissan Stadium'
+    ),
+    NissanFieldAvgPoints AS (
+        SELECT 
+            AVG(totalPoints) AS avgPointsNissanField
+        FROM NissanFieldGames
+    ),
+    NissanFieldPrecipitationAvgPoints AS (
+        SELECT 
+            AVG(totalPoints) AS avgPointsNissanFieldPrecipitation
+        FROM NissanFieldGames
+        WHERE gameTimeTotalPrecipitation > 0
+    )
+    SELECT 
+        NissanFieldGames.*,
+        NissanFieldAvgPoints.avgPointsNissanField,
+        NissanFieldPrecipitationAvgPoints.avgPointsNissanFieldPrecipitation
+    FROM NissanFieldGames, NissanFieldAvgPoints, NissanFieldPrecipitationAvgPoints;
+
+5. Coldest average open roof stadiums
+
+    SELECT
+        name AS stadiumName,
+        AVG(gameTimeApparentTemperature) AS avgGameTimeApparentTemperature
+    FROM
+        historicalWeatherTable
+    WHERE
+        roofType = 'Open'
+    GROUP BY
+        name
+    ORDER BY
+        avgGameTimeApparentTemperature ASC;
